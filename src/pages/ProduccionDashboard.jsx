@@ -8,6 +8,7 @@ import KPICard from '../components/Dashboard/KPICard'
 import FilterBar, { FilterSelect } from '../components/Dashboard/FilterBar'
 import ChartCard from '../components/Dashboard/ChartCard'
 import DataTable from '../components/Dashboard/DataTable'
+import GaugeChart from '../components/Dashboard/GaugeChart'
 import {
     ordenesProduccion, eficienciaLineas, materialesCriticos,
     defectosPorTipo, capacidadUtilizacion, ordenesPendientes, filtrosProduccion
@@ -76,10 +77,12 @@ export default function ProduccionDashboard() {
 
     const totalPlan = filteredProduccionMensual.reduce((s, m) => s + m.planificadas, 0)
     const totalComp = filteredProduccionMensual.reduce((s, m) => s + m.completadas, 0)
-    const cumplimiento = totalPlan > 0 ? ((totalComp / totalPlan) * 100).toFixed(1) : 0
+    const cumplimiento = totalPlan > 0 ? ((totalComp / totalPlan) * 100) : 0
     const eficienciaPromedio = filteredEficiencia.length > 0
-        ? (filteredEficiencia.reduce((s, l) => s + l.eficiencia, 0) / filteredEficiencia.length).toFixed(1) : 0
+        ? (filteredEficiencia.reduce((s, l) => s + l.eficiencia, 0) / filteredEficiencia.length) : 0
     const matCriticos = materialesCriticos.filter(m => m.estado === 'Crítico').length
+    const defectoRate = filteredEficiencia.length > 0
+        ? (filteredEficiencia.reduce((s, l) => s + l.defectos, 0) / filteredEficiencia.length) : 0
 
     const ordenColumns = [
         { key: 'id', label: 'OP' },
@@ -98,7 +101,7 @@ export default function ProduccionDashboard() {
             render: (v) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 60, height: 6, borderRadius: 3, background: 'var(--border-color)', overflow: 'hidden' }}>
-                        <div style={{ width: `${v}%`, height: '100%', borderRadius: 3, background: v === 100 ? '#10b981' : v > 50 ? '#06b6d4' : '#f59e0b' }} />
+                        <div style={{ width: `${v}%`, height: '100%', borderRadius: 3, background: v === 100 ? '#10b981' : v > 50 ? '#06b6d4' : '#f59e0b', transition: 'width 0.5s ease' }} />
                     </div>
                     <span style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)' }}>{v}%</span>
                 </div>
@@ -117,10 +120,72 @@ export default function ProduccionDashboard() {
                 </FilterBar>
 
                 <div className="kpi-grid">
-                    <KPICard icon="🏭" iconColor="cyan" label="Cumplimiento" value={`${cumplimiento}%`} change={3.2} changeType="positive" />
-                    <KPICard icon="⚡" iconColor="purple" label="Eficiencia Prom." value={`${eficienciaPromedio}%`} change={1.8} changeType="positive" />
+                    <KPICard icon="🏭" iconColor="cyan" label="Cumplimiento" value={`${cumplimiento.toFixed(1)}%`} change={3.2} changeType="positive" />
+                    <KPICard icon="⚡" iconColor="purple" label="Eficiencia Prom." value={`${eficienciaPromedio.toFixed(1)}%`} change={1.8} changeType="positive" />
                     <KPICard icon="⚠️" iconColor="red" label="Materiales Críticos" value={matCriticos} change={2} changeType="negative" />
                     <KPICard icon="📋" iconColor="green" label="OPs Activas" value={filteredOrdenes.filter(o => o.estado !== 'Completada').length} change={5.0} changeType="positive" />
+                </div>
+
+                {/* Gauge section */}
+                <div className="charts-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    <ChartCard title="Cumplimiento de Plan" subtitle="Órdenes completadas vs planificadas">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                            <GaugeChart
+                                value={cumplimiento}
+                                min={0}
+                                max={100}
+                                target={95}
+                                label={`${cumplimiento.toFixed(1)}%`}
+                                sublabel="Plan Completado"
+                                targetLabel="Meta: 95%"
+                                size={240}
+                                colors={[
+                                    { stop: 0, color: '#ef4444' },
+                                    { stop: 0.5, color: '#f59e0b' },
+                                    { stop: 0.7, color: '#f59e0b' },
+                                    { stop: 0.85, color: '#10b981' },
+                                    { stop: 1, color: '#06b6d4' },
+                                ]}
+                            />
+                        </div>
+                    </ChartCard>
+
+                    <ChartCard title="Eficiencia General" subtitle="Eficiencia promedio de líneas activas">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                            <GaugeChart
+                                value={eficienciaPromedio}
+                                min={0}
+                                max={100}
+                                target={90}
+                                label={`${eficienciaPromedio.toFixed(1)}%`}
+                                sublabel="Eficiencia OEE"
+                                targetLabel="Meta: 90%"
+                                size={240}
+                                colors={[
+                                    { stop: 0, color: '#ef4444' },
+                                    { stop: 0.5, color: '#f59e0b' },
+                                    { stop: 0.7, color: '#f59e0b' },
+                                    { stop: 0.85, color: '#10b981' },
+                                    { stop: 1, color: '#06b6d4' },
+                                ]}
+                            />
+                        </div>
+                    </ChartCard>
+
+                    <ChartCard title="Tasa de Defectos" subtitle="Porcentaje promedio de defectos">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                            <GaugeChart
+                                value={defectoRate}
+                                min={0}
+                                max={5}
+                                target={1.5}
+                                label={`${defectoRate.toFixed(1)}%`}
+                                sublabel="Tasa Defectos"
+                                targetLabel="Meta: < 1.5%"
+                                size={240}
+                            />
+                        </div>
+                    </ChartCard>
                 </div>
 
                 <div className="charts-grid">

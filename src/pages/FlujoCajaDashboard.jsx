@@ -8,6 +8,7 @@ import KPICard from '../components/Dashboard/KPICard'
 import FilterBar, { FilterSelect } from '../components/Dashboard/FilterBar'
 import ChartCard from '../components/Dashboard/ChartCard'
 import DataTable from '../components/Dashboard/DataTable'
+import GaugeChart from '../components/Dashboard/GaugeChart'
 import { flujoMensual, tendenciaSaldo, composicionGastos, proyeccion30Dias, movimientosRecientes, filtrosFlujoCaja } from '../data/flujoCaja'
 
 const COLORS = ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6']
@@ -38,15 +39,13 @@ export default function FlujoCajaDashboard() {
         return data
     }, [tipo, cuenta])
 
-    // Period filter for main chart
     const filteredFlujo = useMemo(() => {
         let data = flujoMensual
-        if (periodo === 'Trimestral') data = data.filter((_, i) => i % 3 === 2) // Q-end months
+        if (periodo === 'Trimestral') data = data.filter((_, i) => i % 3 === 2)
         else if (periodo === 'Semestral') data = data.filter((_, i) => i === 5 || i === 11)
         return data
     }, [periodo])
 
-    // Type filter for bar chart
     const filteredFlujoByType = useMemo(() => {
         return filteredFlujo.map(m => {
             if (tipo === 'Ingresos') return { ...m, egresos: 0 }
@@ -55,7 +54,6 @@ export default function FlujoCajaDashboard() {
         })
     }, [filteredFlujo, tipo])
 
-    // Saldo trend filtered by period
     const filteredSaldo = useMemo(() => {
         let data = tendenciaSaldo
         if (periodo === 'Trimestral') data = data.filter((_, i) => i % 3 === 2)
@@ -63,7 +61,6 @@ export default function FlujoCajaDashboard() {
         return data
     }, [periodo])
 
-    // Gastos: if tipo=Ingresos, empty; if tipo=Egresos, full
     const filteredGastos = useMemo(() => {
         if (tipo === 'Ingresos') return []
         return composicionGastos
@@ -71,6 +68,12 @@ export default function FlujoCajaDashboard() {
 
     const lastMonth = flujoMensual[flujoMensual.length - 1]
     const saldoActual = tendenciaSaldo[tendenciaSaldo.length - 1].saldo
+
+    // Computed gauge values
+    const totalIngresos = filteredFlujo.reduce((s, m) => s + m.ingresos, 0)
+    const totalEgresos = filteredFlujo.reduce((s, m) => s + m.egresos, 0)
+    const ratioLiquidez = totalEgresos > 0 ? (totalIngresos / totalEgresos) : 0
+    const dso = 42 // Demo: Days Sales Outstanding
 
     const movColumns = [
         { key: 'id', label: 'ID' },
@@ -96,6 +99,71 @@ export default function FlujoCajaDashboard() {
                     <KPICard icon="📥" iconColor="green" label="Ingresos (Dic)" value={`$${(lastMonth.ingresos / 1000).toFixed(1)}K`} change={9.4} changeType="positive" />
                     <KPICard icon="📤" iconColor="red" label="Egresos (Dic)" value={`$${(lastMonth.egresos / 1000).toFixed(1)}K`} change={6.7} changeType="negative" />
                     <KPICard icon="🔮" iconColor="purple" label="Proyección 30d" value={`$${((saldoActual + 15000) / 1000).toFixed(1)}K`} change={8.3} changeType="positive" />
+                </div>
+
+                {/* Gauge section */}
+                <div className="charts-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                    <ChartCard title="Días Calle (DSO)" subtitle="Promedio de días para cobrar">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                            <GaugeChart
+                                value={dso}
+                                min={0}
+                                max={90}
+                                target={30}
+                                label={`${dso} Días`}
+                                sublabel="DSO Actual"
+                                targetLabel="Target: 30 Días"
+                                size={240}
+                            />
+                        </div>
+                    </ChartCard>
+
+                    <ChartCard title="Ratio de Liquidez" subtitle="Ingresos / Egresos (meta > 1.0)">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                            <GaugeChart
+                                value={ratioLiquidez * 100}
+                                min={0}
+                                max={200}
+                                target={100}
+                                label={ratioLiquidez.toFixed(2)}
+                                sublabel="Ratio Corriente"
+                                targetLabel="Meta: ≥ 1.00"
+                                size={240}
+                                colors={[
+                                    { stop: 0, color: '#ef4444' },
+                                    { stop: 0.35, color: '#f97316' },
+                                    { stop: 0.5, color: '#f59e0b' },
+                                    { stop: 0.6, color: '#10b981' },
+                                    { stop: 0.8, color: '#10b981' },
+                                    { stop: 1, color: '#06b6d4' },
+                                ]}
+                            />
+                        </div>
+                    </ChartCard>
+
+                    <ChartCard title="Cobertura de Caja" subtitle="Meses de operación cubiertos">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                            <GaugeChart
+                                value={3.8}
+                                min={0}
+                                max={12}
+                                target={3}
+                                label="3.8"
+                                sublabel="Meses Cubiertos"
+                                targetLabel="Mínimo: 3 meses"
+                                unit=" meses"
+                                size={240}
+                                colors={[
+                                    { stop: 0, color: '#ef4444' },
+                                    { stop: 0.15, color: '#f97316' },
+                                    { stop: 0.25, color: '#f59e0b' },
+                                    { stop: 0.4, color: '#10b981' },
+                                    { stop: 0.7, color: '#10b981' },
+                                    { stop: 1, color: '#06b6d4' },
+                                ]}
+                            />
+                        </div>
+                    </ChartCard>
                 </div>
 
                 <div className="charts-grid">

@@ -8,6 +8,7 @@ import KPICard from '../components/Dashboard/KPICard'
 import FilterBar, { FilterSelect } from '../components/Dashboard/FilterBar'
 import ChartCard from '../components/Dashboard/ChartCard'
 import DataTable from '../components/Dashboard/DataTable'
+import GaugeChart from '../components/Dashboard/GaugeChart'
 import {
     ventasMensuales, ventasPorCategoria, topVendedores,
     ventasPorRegion, detalleVentas, filtrosVentas
@@ -129,6 +130,43 @@ export default function VentasDashboard() {
                     <KPICard icon="🎫" iconColor="purple" label="Ticket Promedio" value={`$${ticketPromedio.toFixed(0)}`} change={3.2} changeType="positive" />
                     <KPICard icon="🔄" iconColor="green" label="Transacciones" value={totalTransacciones.toLocaleString()} change={8.7} changeType="positive" />
                     <KPICard icon="📊" iconColor="amber" label="Crecimiento" value="+15.2%" change={15.2} changeType="positive" />
+                </div>
+
+                {/* Gauge section */}
+                <div className="charts-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                    <ChartCard title="Meta de Ventas" subtitle="Cumplimiento del objetivo anual">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+                            <GaugeChart
+                                value={(() => { const totalMeta = filteredMensuales.reduce((s, m) => s + m.meta, 0); return totalMeta > 0 ? (totalVentas / totalMeta) * 100 : 0 })()}
+                                min={0}
+                                max={120}
+                                target={100}
+                                label={(() => { const totalMeta = filteredMensuales.reduce((s, m) => s + m.meta, 0); return totalMeta > 0 ? `${((totalVentas / totalMeta) * 100).toFixed(1)}%` : '0%' })()}
+                                sublabel="vs Meta Anual"
+                                targetLabel="Meta: 100%"
+                                size={260}
+                                colors={[
+                                    { stop: 0, color: '#ef4444' },
+                                    { stop: 0.5, color: '#f59e0b' },
+                                    { stop: 0.7, color: '#f59e0b' },
+                                    { stop: 0.83, color: '#10b981' },
+                                    { stop: 1, color: '#06b6d4' },
+                                ]}
+                            />
+                        </div>
+                    </ChartCard>
+
+                    <ChartCard title="Participación por Región" subtitle="Distribución geográfica de ventas">
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8, gap: 16, flexWrap: 'wrap' }}>
+                            {filteredRegiones.map((r, i) => (
+                                <div key={r.region} style={{ textAlign: 'center', minWidth: 80 }}>
+                                    <div style={{ fontSize: 'var(--font-2xl)', fontWeight: 800, color: COLORS[i % COLORS.length] }}>{r.porcentaje}%</div>
+                                    <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-muted)', fontWeight: 600, marginTop: 4 }}>{r.region}</div>
+                                    <div style={{ fontSize: 'var(--font-xs)', color: 'var(--text-secondary)' }}>${(r.ventas / 1000).toFixed(0)}K</div>
+                                </div>
+                            ))}
+                        </div>
+                    </ChartCard>
                 </div>
 
                 <div className="charts-grid">
